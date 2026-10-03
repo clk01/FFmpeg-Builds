@@ -1,0 +1,50 @@
+name: Build FFmpeg win32 nonfree
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout official BtbN build scripts
+        uses: actions/checkout@v7
+        with:
+          repository: BtbN/FFmpeg-Builds
+          ref: master
+          persist-credentials: false
+
+      - name: Free disk space using the official script
+        run: ./util/free_disk_space.sh
+
+      - name: Check Docker and Buildx
+        run: |
+          sudo docker version
+          sudo docker buildx version
+
+      - name: Build win32 nonfree dependencies
+        run: sudo ./makeimage.sh win32 nonfree
+
+      - name: Build and package FFmpeg
+        run: sudo ./build.sh win32 nonfree
+
+      - name: Make artifacts readable
+        run: sudo chown -R "$(id -u):$(id -g)" artifacts
+
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: ffmpeg-win32-nonfree
+          path: artifacts/*-win32-nonfree.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
